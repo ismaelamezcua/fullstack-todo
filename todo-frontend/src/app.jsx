@@ -1,6 +1,6 @@
 function App() {
   return (
-    <div>
+    <div className="container mx-auto">
       <h1>ToDo App</h1>
     </div>
   );
