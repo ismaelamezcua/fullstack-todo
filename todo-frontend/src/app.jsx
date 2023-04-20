@@ -44,14 +44,16 @@ function App() {
       </form>
       <ul className="">
         {todos.map((todo) => (
-          <li key={todo.id} className="py-2 flex items-center">
-            <input
-              type="checkbox"
-              name={todo.id}
-              defaultChecked={todo.done}
-              onClick={handleCheckbox}
-            />
-            <p className="pl-4">{todo.text}</p>
+          <li key={todo.id} className="py-2">
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                name={todo.id}
+                defaultChecked={todo.done}
+                onClick={handleCheckbox}
+              />
+              <span className="pl-4">{todo.text}</span>
+            </label>
           </li>
         ))}
       </ul>
