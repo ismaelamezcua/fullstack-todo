@@ -1,6 +1,8 @@
 const express = require("express");
 const cors = require("cors");
+const Database = require("better-sqlite3");
 const app = express();
+const db = new Database("todos.db", { verbose: console.log });
 
 // Check whether the port number is provided or use 3000 as default.
 const port = process.env.PORT || 3000;
@@ -9,13 +11,16 @@ const port = process.env.PORT || 3000;
 app.use(express.json());
 app.use(cors());
 
-// Placeholder ToDos. Will store them in a DB later.
-let todos = [{id: 1, text: "This is the First ToDo", done: false}, {id: 2, text: "This is the second ToDo", done: true}];
+// Create the database structure
+db.exec(
+  "CREATE TABLE IF NOT EXISTS todos (id INTEGER PRIMARY KEY AUTOINCREMENT, text TEXT NOT NULL, done INTEGER)"
+);
 
 // GET all ToDos.
 app.get("/api/v1/todos", (req, res) => {
-  // res.send(JSON.stringify(todos));
-  res.json(todos);
+  const todos = db.prepare("SELECT * FROM todos WHERE done = 0").all();
+
+  res.send(JSON.stringify(todos));
 });
 
 // POST a new ToDo.
@@ -34,30 +39,33 @@ app.post("/api/v1/todos", (req, res) => {
     return;
   }
 
-  // Create a new ToDo object.
-  let newTodo = { id: Date.now(), text, done: false };
+  // Insert a new ToDo into the DB.
+  const stmt = db.prepare("INSERT INTO todos (text, done) VALUES (?, 0)");
+  const newTodo = stmt.run(text);
 
-  // Store the new ToDo object. Will store in DB later.
-  todos.push(newTodo);
+  // Get the ToDo we just created.
+  const todo = db
+    .prepare("SELECT * FROM todos WHERE id = ?")
+    .get(newTodo.lastInsertRowid);
 
-  res.json(newTodo);
+  res.json(todo);
 });
 
 // Update a ToDo.
 app.put("/api/v1/todos/:id", (req, res) => {
-  // Get the id from the params in the request URI (:id)
+  // Get the id from the params in the request URI (:id).
   const { id } = req.params;
-  // Get the done state from the request body
+  // Get the done state from the request body.
   const { done } = req.body;
 
-  // Update the ToDo with :id in the array.
-  todos = todos.map((todo) => ({
-    ...todo,
-    done: todo.id == id ? done : todo.done,
-  }));
+  // Update the ToDo with {id} with {done}.
+  const stmt = db.prepare("UPDATE todos SET done = ? WHERE id = ?");
+  const result = stmt.run(done ? 1 : 0, id);
 
-  // Get the updated ToDo with :id
-  let todo = todos.find((todo) => todo.id == id);
+  // Get the ToDo we just updated.
+  const todo = db
+    .prepare("SELECT * FROM todos WHERE id = ?")
+    .get(result.lastInsertRowid);
 
   res.json(todo);
 });

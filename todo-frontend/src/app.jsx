@@ -1,33 +1,57 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import ListTodos from "./components/list-todos";
 
 function App() {
   const [todos, setTodos] = useState([]);
   const [todo, setTodo] = useState("");
+  const [updateTodos, setUpdateTodos] = useState(false);
+
+  async function getTodos() {
+    const response = await fetch("http://localhost:3000/api/v1/todos");
+    const todos = await response.json();
+
+    setTodos(todos);
+  }
+
+  useEffect(() => {
+    getTodos();
+  }, [updateTodos]);
 
   function handleSubmit(event) {
     event.preventDefault();
 
     if (todo.length <= 0) return;
 
-    let newTodo = { id: Date.now(), text: todo, done: false };
-    setTodos([...todos, newTodo]);
+    // Do the POST and then issue an update
+    fetch("http://localhost:3000/api/v1/todos", {
+      method: "POST",
+      body: JSON.stringify({ text: todo }),
+      headers: {
+        "Content-type": "application/json",
+      },
+    }).then(setUpdateTodos(!updateTodos));
+
     setTodo("");
   }
 
   function handleCheckbox(event) {
     const { name, checked } = event.target;
-    let updatedTodos = todos.map((todo) => ({
-      ...todo,
-      done: todo.id == name ? checked : todo.done,
-    }));
 
-    setTodos(updatedTodos);
+    fetch(`http://localhost:3000/api/v1/todos/${name}`, {
+      method: "PUT",
+      body: JSON.stringify({ done: checked }),
+      headers: {
+        "Content-type": "application/json",
+      },
+    });
+
+    setUpdateTodos(!updateTodos);
   }
 
   function handleRemove() {
-    let updatedTodos = todos.filter((todo) => !todo.done);
-
-    setTodos(updatedTodos);
+    fetch("http://localhost:3000/api/v1/todos", {
+      method: "DELETE",
+    }).then(setUpdateTodos(!updateTodos));
   }
 
   return (
@@ -42,21 +66,7 @@ function App() {
           onChange={(e) => setTodo(e.target.value)}
         />
       </form>
-      <ul className="">
-        {todos.map((todo) => (
-          <li key={todo.id} className="py-2">
-            <label className="flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                name={todo.id}
-                defaultChecked={todo.done}
-                onClick={handleCheckbox}
-              />
-              <span className="pl-4">{todo.text}</span>
-            </label>
-          </li>
-        ))}
-      </ul>
+      <ListTodos todos={todos} handleCheckbox={handleCheckbox} />
       <div className="flex justify-end my-4">
         <button
           className="bg-slate-800 px-4 py-2 text-white"
